@@ -4,7 +4,7 @@ namespace Swoft\WebSocket\Server\Bean\Parser;
 
 use Swoft\Bean\Parser\AbstractParser;
 use Swoft\Bean\Annotation\Scope;
-use Swoft\View\Bean\Collector\WebSocketCollector;
+use Swoft\WebSocket\Server\Bean\Collector\WebSocketCollector;
 use Swoft\WebSocket\Server\Bean\Annotation\WebSocket;
 
 /**

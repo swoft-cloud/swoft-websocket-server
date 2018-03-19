@@ -3,16 +3,20 @@
 namespace Swoft\WebSocket\Server;
 
 use Swoft\App;
+use Swoft\Core\RequestContext;
 use Swoft\WebSocket\Server\Event\WsEvent;
-//use Swoft\WebSocket\Server\WebSocket;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
+use Swoole\WebSocket\Frame;
+use Swoole\WebSocket\Server;
+
+//use Swoft\WebSocket\Server\WebSocket;
 
 /**
  * Trait HandshakeTrait
  * @package Swoft\WebSocket\Server
  */
-trait HandshakeTrait
+trait WebSocketEventTrait
 {
     public $forTesting = true;
 
@@ -144,5 +148,75 @@ trait HandshakeTrait
         $response->end();
 
         return true;
+    }
+
+
+    /**
+     * @param Server $server
+     * @param Request $request
+     * @throws \InvalidArgumentException
+     */
+    public function onOpen(Server $server, Request $request)
+    {
+        // Initialize Request and Response and set to RequestContent
+        $psr7Request = \Swoft\Http\Message\Server\Request::loadFromSwooleRequest($request);
+        // $psr7Response = new \Swoft\Http\Message\Server\Response($response);
+
+        RequestContext::setRequest($psr7Request);
+
+        App::trigger(WsEvent::ON_OPEN, null, $server, $request);
+
+        $this->log("connection #$request->fd has been opened");
+    }
+
+    /**
+     * When you receive the message
+     * @param  Server $server
+     * @param  Frame $frame
+     */
+    public function onMessage(Server $server, Frame $frame)
+    {
+        /** @var \Swoft\Http\Server\ServerDispatcher $dispatcher */
+        // $dispatcher = App::getBean('wsDispatcher');
+        // $dispatcher->dispatch($frame);
+
+        $this->log('received message: ' . $frame->data . " from #$frame->fd");
+    }
+
+    /**
+     * webSocket close
+     * @param  Server $server
+     * @param  int $fd
+     * @throws \InvalidArgumentException
+     */
+    public function onClose(Server $server, $fd)
+    {
+        /*
+        WEBSOCKET_STATUS_CONNECTION = 1，连接进入等待握手
+        WEBSOCKET_STATUS_HANDSHAKE = 2，正在握手
+        WEBSOCKET_STATUS_FRAME = 3，已握手成功等待浏览器发送数据帧
+        */
+        $fdInfo = $this->getClientInfo($fd);
+
+        // is web socket request(websocket_status = 2)
+        if ($fdInfo['websocket_status'] > 0) {
+            // $meta = $this->delConnection($fd);
+            //
+            // if (!$meta) {
+            //     $this->log("the #$fd connection info has lost");
+            //
+            //     return;
+            // }
+
+            // call on close callback
+            App::trigger(WsEvent::ON_CLOSE, null, $server, $fd);
+
+            // $this->log(
+            //     "onClose: The #$fd client has been closed! workerId: {$server->worker_id} ctxKey:{$meta->getKey()}, From {$meta['ip']}:{$meta['port']}. Count: {$this->count()}"
+            // );
+            $this->log("onClose: Client #{$fd} is closed. client-info:\n" . var_export($fdInfo, 1));
+        }
+
+        RequestContext::destroy();
     }
 }

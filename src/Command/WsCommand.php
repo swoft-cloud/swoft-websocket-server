@@ -61,11 +61,11 @@ class WsCommand
 
         // 信息面板
         $lines = [
-            '                         Information Panel                     ',
-            '********************************************************************',
-            "* WS   | host: <note>$wsHost</note>, port: <note>$wsPort</note>, mode: <note>$wsMode</note>, type: <note>$wsType</note>, Worker: <note>$workerNum</note>(Handle http: $httpStatus)",
-            "* TCP  | host: <note>$tcpHost</note>, port: <note>$tcpPort</note>, type: <note>$tcpType</note>, Worker: <note>$workerNum</note> ($tcpStatus)",
-            '********************************************************************',
+            '                                 Server Information                     ',
+            '************************************************************************************',
+            "* WS   | host: <note>$wsHost</note>, port: <note>$wsPort</note>, type: <note>$wsType</note>, worker: <note>$workerNum</note>, mode: <note>$wsMode</note> (http is $httpStatus)",
+            "* TCP  | host: <note>$tcpHost</note>, port: <note>$tcpPort</note>, type: <note>$tcpType</note>, worker: <note>$workerNum</note> ($tcpStatus)",
+            '************************************************************************************',
         ];
 
         // 启动服务器

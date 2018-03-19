@@ -1,6 +1,6 @@
 <?php
 
-namespace Swoft\View\Bean\Collector;
+namespace Swoft\WebSocket\Server\Bean\Collector;
 
 use Swoft\Bean\CollectorInterface;
 use Swoft\WebSocket\Server\Bean\Annotation\WebSocket;

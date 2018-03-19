@@ -4,7 +4,7 @@ namespace Swoft\WebSocket\Server\Bootstrap;
 
 use Swoft\Bean\Annotation\BootBean;
 use Swoft\Core\BootBeanInterface;
-use Swoft\WebSocket\Server\HandlerMapping;
+use Swoft\WebSocket\Server\Router\HandlerMapping;
 use Swoft\WebSocket\Server\WsDispatcher;
 
 /**

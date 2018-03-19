@@ -6,14 +6,15 @@
  * Time: 下午7:50
  */
 
-namespace Swoft\WebSocket\Server;
+namespace Swoft\WebSocket\Server\Router;
+use Swoft\Http\Message\Router\HandlerMappingInterface;
 use Swoft\WebSocket\Server\Exception\WsRouteException;
 
 /**
  * Class HandlerMapping
- * @package Swoft\WebSocket\Server
+ * @package Swoft\WebSocket\Server\Router
  */
-class HandlerMapping
+class HandlerMapping implements HandlerMappingInterface
 {
     /**
      * @var array
@@ -55,12 +56,13 @@ class HandlerMapping
      *
      * @param string $path
      * @param mixed $handler
+     * @param array $options
      */
-    private function registerRoute(string $path, $handler)
+    private function registerRoute(string $path, $handler, array $options = [])
     {
         $path = '/' . \trim($path, '/ ');
 
-        $this->routes[$path] = $handler;
+        $this->routes[$path] = [$handler, $options];
     }
 
     /**
