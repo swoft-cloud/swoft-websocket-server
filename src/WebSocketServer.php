@@ -117,12 +117,15 @@ class WebSocketServer extends HttpServer
         if (!$data) {
             return 0;
         }
+
         $receivers = (array)$receivers;
         $expected = (array)$expected;
+
         // only one receiver
         if (1 === \count($receivers)) {
             return $this->sendTo(array_shift($receivers), $data, $sender);
         }
+
         // to all
         if (!$expected && !$receivers) {
             $this->sendToAll($data, $sender);
@@ -136,9 +139,9 @@ class WebSocketServer extends HttpServer
 
     /**
      * Send a message to the specified user 发送消息给指定的用户
-     * @param int $receiver 接收者
+     * @param int $receiver 接收者 fd
      * @param string $data
-     * @param int $sender 发送者
+     * @param int $sender 发送者 fd
      * @return int
      */
     public function sendTo(int $receiver, string $data, int $sender = 0): int
@@ -158,7 +161,7 @@ class WebSocketServer extends HttpServer
      * @param int $sender 发送者
      * @param int[] $receivers 指定接收者们
      * @param int[] $expected 要排除的接收者
-     * @return int   Return socket last error number code.  gt 0 on failure, eq 0 on success
+     * @return int Return socket last error number code.  gt 0 on failure, eq 0 on success
      */
     public function broadcast(string $data, array $receivers = [], array $expected = [], int $sender = 0): int
     {

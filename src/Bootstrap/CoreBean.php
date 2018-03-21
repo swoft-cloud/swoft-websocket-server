@@ -5,7 +5,7 @@ namespace Swoft\WebSocket\Server\Bootstrap;
 use Swoft\Bean\Annotation\BootBean;
 use Swoft\Core\BootBeanInterface;
 use Swoft\WebSocket\Server\Router\HandlerMapping;
-use Swoft\WebSocket\Server\WsDispatcher;
+use Swoft\WebSocket\Server\Router\Dispatcher;
 
 /**
  * The core bean of service
@@ -21,7 +21,7 @@ class CoreBean implements BootBeanInterface
     {
         return [
             'wsDispatcher' => [
-                'class' => WsDispatcher::class,
+                'class' => Dispatcher::class,
             ],
             'wsRouter'     => [
                 'class' => HandlerMapping::class,

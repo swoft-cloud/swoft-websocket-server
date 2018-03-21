@@ -19,29 +19,29 @@ final class WebSocket
      */
     public static function genSign(string $key): string
     {
-        return \base64_encode(\sha1(trim($key) . self::SIGN_KEY, true));
+        return \base64_encode(\sha1(\trim($key) . self::SIGN_KEY, true));
     }
 
     /**
      * @param string $secWSKey 'sec-websocket-key: xxxx'
      * @return bool
      */
-    public static function isInvalidSecWSKey($secWSKey): bool
+    public static function isInvalidSecWSKey(string $secWSKey): bool
     {
         return 0 === \preg_match(self::KEY_PATTEN, $secWSKey) ||
                16 !== \strlen(\base64_decode($secWSKey));
     }
 
     /**
-     * @param string $secKey
+     * @param string $secWSKey
      * @return array
      */
-    public static function handshakeHeaders(string $secKey): array
+    public static function handshakeHeaders(string $secWSKey): array
     {
         return [
             'Upgrade' => 'websocket',
             'Connection' => 'Upgrade',
-            'Sec-WebSocket-Accept' => self::genSign($secKey),
+            'Sec-WebSocket-Accept' => self::genSign($secWSKey),
             'Sec-WebSocket-Version' => self::VERSION,
         ];
     }

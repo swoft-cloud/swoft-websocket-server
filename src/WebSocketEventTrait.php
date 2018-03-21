@@ -3,6 +3,7 @@
 namespace Swoft\WebSocket\Server;
 
 use Swoft\App;
+use Swoft\Core\Coroutine;
 use Swoft\Core\RequestContext;
 use Swoft\WebSocket\Server\Event\WsEvent;
 use Swoole\Http\Request;
@@ -51,6 +52,10 @@ trait WebSocketEventTrait
         // 初始化客户端信息
         $meta = new Connection($metaAry);
         $meta->setRequestResponse($request, $response);
+
+        // Initialize psr7 Request and Response
+        $psr7Req = \Swoft\Http\Message\Server\Request::loadFromSwooleRequest($request);
+        $psr7Res = new \Swoft\Http\Message\Server\Response($response);
 
         $request = $meta->getRequest();
         $secKey = $request->getHeaderLine('sec-websocket-key');
@@ -103,6 +108,11 @@ trait WebSocketEventTrait
         return true;
     }
 
+    /**
+     * @param Request $request
+     * @param Response $response
+     * @return bool
+     */
     protected function simpleHandshake(Request $request, Response $response): bool
     {
         // print_r( $request->header );
@@ -111,27 +121,18 @@ trait WebSocketEventTrait
         //     return false;
         // }
 
-        // websocket握手连接算法验证
-        $secWebSocketKey = $request->header['sec-websocket-key'];
-        $patten = '#^[+/0-9A-Za-z]{21}[AQgw]==$#';
+        $this->log("received handshake request from fd #{$request->fd}, co ID #" . Coroutine::tid());
 
-        if (0 === preg_match($patten, $secWebSocketKey) || 16 !== \strlen(base64_decode($secWebSocketKey))) {
+        // websocket握手连接算法验证
+        $secWSKey = $request->header['sec-websocket-key'];
+
+        if (WebSocket::isInvalidSecWSKey($secWSKey)) {
             $response->end();
+
             return false;
         }
 
-        // echo $request->header['sec-websocket-key'];
-        $key = base64_encode(sha1(
-            $request->header['sec-websocket-key'] . '258EAFA5-E914-47DA-95CA-C5AB0DC85B11',
-            true
-        ));
-
-        $headers = [
-            'Upgrade' => 'websocket',
-            'Connection' => 'Upgrade',
-            'Sec-WebSocket-Accept' => $key,
-            'Sec-WebSocket-Version' => '13',
-        ];
+        $headers = WebSocket::handshakeHeaders($secWSKey);
 
         // WebSocket connection to 'ws://127.0.0.1:9502/'
         // failed: Error during WebSocket handshake:
@@ -180,7 +181,7 @@ trait WebSocketEventTrait
         // $dispatcher = App::getBean('wsDispatcher');
         // $dispatcher->dispatch($frame);
 
-        $this->log('received message: ' . $frame->data . " from #$frame->fd");
+        $this->log('received message: ' . $frame->data . " from fd #{$frame->fd}, co ID #" . Coroutine::tid());
     }
 
     /**

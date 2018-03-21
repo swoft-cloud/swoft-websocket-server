@@ -6,15 +6,14 @@
  * Time: 上午2:20
  */
 
-namespace Swoft\WebSocket\Server;
+namespace Swoft\WebSocket\Server\Router;
 
 /**
  * Class WsDispatcher
  * @package Swoft\WebSocket\Server
  */
-class WsDispatcher
+class Dispatcher
 {
-
     public function handshake()
     {
 
