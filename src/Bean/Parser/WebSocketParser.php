@@ -16,10 +16,10 @@ class WebSocketParser extends AbstractParser
     /**
      * WebSocket Controller注解解析
      *
-     * @param string      $className
-     * @param WebSocket  $objectAnnotation
-     * @param string      $propertyName
-     * @param string      $methodName
+     * @param string $className
+     * @param WebSocket $objectAnnotation
+     * @param string $propertyName
+     * @param string $methodName
      * @param string|null $propertyValue
      *
      * @return array
@@ -28,7 +28,7 @@ class WebSocketParser extends AbstractParser
     {
         $beanName = $className;
         $scope = Scope::SINGLETON;
-
+        \var_dump(__METHOD__);
         // collect controller
         WebSocketCollector::collect($className, $objectAnnotation, $propertyName, $methodName, $propertyValue);
 

@@ -172,7 +172,7 @@ class WebSocketServer extends HttpServer
 
         // only one receiver
         if (1 === \count($receivers)) {
-            return $this->sendTo(array_shift($receivers), $data, $sender);
+            return $this->sendTo(\array_shift($receivers), $data, $sender);
         }
 
         // to all
@@ -206,7 +206,7 @@ class WebSocketServer extends HttpServer
             }
 
             $count += $num;
-            $startFd = end($connList);
+            $startFd = \end($connList);
 
             /** @var $connList array */
             foreach ($connList as $fd) {
@@ -240,7 +240,7 @@ class WebSocketServer extends HttpServer
             $this->log("(broadcast)The #{$fromUser} gave some specified user sending a message. Data: {$data}");
 
             foreach ($receivers as $receiver) {
-                if ($this->hasConnection($receiver)) {
+                if (WebSocketContext::has($receiver)) {
                     $count++;
                     $this->server->push($receiver, $res, $len);
                 }
@@ -261,7 +261,7 @@ class WebSocketServer extends HttpServer
             }
 
             $count += $num;
-            $startFd = end($connList);
+            $startFd = \end($connList);
 
             /** @var $connList array */
             foreach ($connList as $fd) {

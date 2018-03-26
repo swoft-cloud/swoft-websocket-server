@@ -19,8 +19,6 @@ use Swoole\WebSocket\Server;
  */
 trait WebSocketEventTrait
 {
-    public $forTesting = true;
-
     /**
      * webSocket 建立连接后进行握手。WebSocket服务器已经内置了handshake，
      * 如果用户希望自己进行握手处理，可以设置 onHandShake 事件回调函数。
@@ -32,15 +30,11 @@ trait WebSocketEventTrait
      */
     public function onHandShake(Request $request, Response $response): bool
     {
-        if ($this->forTesting) {
-            return $this->simpleHandshake($request, $response);
-        }
-
         $fd = $request->fd;
         $secWSKey = $request->header['sec-websocket-key'];
 
         // sec-websocket-key 错误
-        if (!WebSocket::isInvalidSecWSKey($secWSKey)) {
+        if (WebSocket::isInvalidSecWSKey($secWSKey)) {
             $this->log("Handshake: shake hands failed with the #$fd. 'sec-websocket-key' is error!");
 
             return false;
@@ -60,8 +54,8 @@ trait WebSocketEventTrait
         $cid = Coroutine::tid();
 
         $this->log(
-            "Handshake: Ready to shake hands with the #$fd client connection, co ID #$cid. request headers:",
-            $psr7Req->getHeaders()
+            "Handshake: Ready to shake hands with the #$fd client connection, path {$metaAry['path']}, co ID #$cid. request headers:\n" .
+            \var_export($psr7Req->getHeaders(), 1)
         );
 
         App::trigger(WsEvent::ON_HANDSHAKE, null, $request, $response, $fd);
@@ -74,7 +68,7 @@ trait WebSocketEventTrait
 
         // handshake check is failed -- 拒绝连接，比如需要认证，限定路由，限定ip，限定domain等
         if (HandlerInterface::HANDSHAKE_OK !== $status) {
-            $this->log("The #$fd client handshake check failed");
+            $this->log("The #$fd client handshake check failed, uri path {$metaAry['path']}");
             $psr7Res->send();
 
             return false;
@@ -89,19 +83,25 @@ trait WebSocketEventTrait
             $psr7Res = $psr7Res->withHeader('Sec-WebSocket-Protocol', $request->header['sec-websocket-protocol']);
         }
 
-        $this->log('Handshake: response headers:', $psr7Res->getHeaders());
+        $this->log("Handshake: response headers:\n" . \var_export($psr7Res->getHeaders(), 1));
 
         // Response handshake successfully
         $psr7Res->send();
-        $this->log("Handshake: The #{$fd} client handshake successful! Meta:\n" . var_export($metaAry, 1));
+
+        WebSocketContext::setMeta($fd, true, 'handshake');
+
+        $this->log(
+            "Handshake: The #{$fd} client handshake successful! path {$metaAry['path']}, co Id #$cid, Meta:\n" .
+            var_export($metaAry, 1)
+        );
 
         // Handshaking successful, Manually triggering the open event
         $this->server->defer(function () use ($psr7Req, $fd) {
             $this->onWsOpen($this->server, $psr7Req, $fd);
-        });
 
-        // delete coId to fd mapping
-        WebSocketContext::delFdToCoId();
+            // delete coId to fd mapping
+            WebSocketContext::delFdToCoId();
+        });
 
         return true;
     }
@@ -148,6 +148,8 @@ trait WebSocketEventTrait
      * When you receive the message
      * @param  Server $server
      * @param  Frame $frame
+     * @throws \Swoft\WebSocket\Server\Exception\WsRouteException
+     * @throws \Swoft\WebSocket\Server\Exception\WsMessageException
      * @throws \InvalidArgumentException
      */
     public function onMessage(Server $server, Frame $frame)
@@ -161,9 +163,8 @@ trait WebSocketEventTrait
 
         $this->log("received message: {$frame->data} from fd #{$fd}, co ID #" . Coroutine::tid());
 
-        /** @var Dispatcher $dispatcher */
-        $dispatcher = \bean('wsDispatcher');
-        $dispatcher->dispatch($server, $frame);
+        /** @see Dispatcher::message() */
+        \bean('wsDispatcher')->message($server, $frame);
 
         // delete coId to fd mapping
         WebSocketContext::delFdToCoId();
@@ -175,7 +176,7 @@ trait WebSocketEventTrait
      * @param  int $fd
      * @throws \InvalidArgumentException
      */
-    public function onClose(Server $server, $fd)
+    public function onClose(Server $server, int $fd)
     {
         /*
         WEBSOCKET_STATUS_CONNECTION = 1，连接进入等待握手
@@ -193,15 +194,17 @@ trait WebSocketEventTrait
             //
             //     return;
             // }
-            WebSocketContext::del($fd);
+
+            /** @see Dispatcher::close() */
+            \bean('wsDispatcher')->close($server, $fd);
 
             // call on close callback
             App::trigger(WsEvent::ON_CLOSE, null, $server, $fd);
 
-            // $this->log(
-            //     "onClose: The #$fd client has been closed! workerId: {$server->worker_id} ctxKey:{$meta->getKey()}, From {$meta['ip']}:{$meta['port']}. Count: {$this->count()}"
-            // );
             $this->log("onClose: Client #{$fd} is closed. client-info:\n" . var_export($fdInfo, 1));
+
+            // clear context info of the connection
+            WebSocketContext::del($fd);
         }
     }
 

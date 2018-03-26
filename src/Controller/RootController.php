@@ -36,7 +36,7 @@ class RootController implements HandlerInterface
      */
     public function onOpen(Server $server, Request $request, int $fd)
     {
-        $server->send($fd, 'hello, welcome! :)');
+        $server->push($fd, 'hello, welcome! :)');
     }
 
     /**
@@ -45,7 +45,7 @@ class RootController implements HandlerInterface
      */
     public function onMessage(Server $server, Frame $frame)
     {
-        $server->send($frame->fd, 'hello, I have received your message: ' . $frame->data);
+        $server->push($frame->fd, 'hello, I have received your message: ' . $frame->data);
     }
 
     /**
@@ -54,6 +54,6 @@ class RootController implements HandlerInterface
      */
     public function onClose(Server $server, int $fd)
     {
-        $server->send($fd, 'oo, goodbye! :)');
+        $server->push($fd, 'oo, goodbye! :)');
     }
 }

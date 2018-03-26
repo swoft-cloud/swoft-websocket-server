@@ -23,6 +23,7 @@ class WebSocketContext
      *      'meta' => [
      *          'id' => fd,
      *          'path' => request path,
+     *          ...
      *      ],
      *
      *      'request' => swoft psr7 request
@@ -60,8 +61,7 @@ class WebSocketContext
     public static function get(int $fd = null)
     {
         if ($fd === null) {
-            $cid = self::getCoroutineId();
-            $fd = self::$map[$cid] ?? null;
+            $fd = self::getFdByCoId();
 
             if ($fd === null) {
                 return null;
@@ -72,11 +72,34 @@ class WebSocketContext
     }
 
     /**
+     * @param int $fd
+     * @return bool
+     */
+    public static function has(int $fd): bool
+    {
+        return isset(self::$connections[$fd]);
+    }
+
+    /**
      * @param int|null $fd
+     * @return null
      */
     public static function del(int $fd = null)
     {
+        if ($fd === null) {
+            $fd = self::getFdByCoId();
 
+            if ($fd === null) {
+                return false;
+            }
+        }
+
+        if (isset(self::$connections[$fd])) {
+            unset(self::$connections[$fd]);
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -115,11 +138,12 @@ class WebSocketContext
 
     /**
      * @param string|null $key
+     * @param int|null $fd
      * @return array|mixed
      */
-    public static function getMeta(string $key = null)
+    public static function getMeta(string $key = null, int $fd = null)
     {
-        $meta = self::getCoroutineContext(self::META_KEY);
+        $meta = self::getCoroutineContext(self::META_KEY, $fd);
 
         if ($key === null) {
             return $meta;
@@ -134,26 +158,31 @@ class WebSocketContext
     }
 
     /**
+     * @param int $fd
      * @param mixed $value
      * @param string|null $key The key of the meta
      */
-    public static function setMeta($value, string $key = null)
+    public static function setMeta(int $fd, $value, string $key = null)
     {
-        if ($key === null) {
-
+        if ($key !== null) {
+            $meta = self::getCoroutineContext(self::META_KEY);
+            $meta[$key] = $value;
+            // override
+            $value = $meta;
         }
 
-        $meta = self::getCoroutineContext(self::META_KEY);
-
+        // setting
+        self::$connections[$fd][self::META_KEY] = $value;
     }
 
     /**
      * @param string $key
+     * @param int|null $fd
      * @return mixed|null
      */
-    public static function getCoroutineContext(string $key)
+    public static function getCoroutineContext(string $key, int $fd = null)
     {
-        $fd = self::getFdByCoId();
+        $fd = $fd ?? self::getFdByCoId();
 
         // find context
         if (!$context = self::$connections[$fd] ?? null) {
@@ -227,5 +256,4 @@ class WebSocketContext
     {
         return self::$connections;
     }
-
 }

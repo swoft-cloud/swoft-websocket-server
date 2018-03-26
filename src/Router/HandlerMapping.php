@@ -3,7 +3,7 @@
 namespace Swoft\WebSocket\Server\Router;
 
 use Swoft\Http\Message\Router\HandlerMappingInterface;
-use Swoft\WebSocket\Server\Exception\WsRouteException;
+
 
 /**
  * Class HandlerMapping
