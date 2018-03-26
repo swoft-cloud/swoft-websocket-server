@@ -11,6 +11,7 @@ namespace Swoft\WebSocket\Server\Controller;
 use Swoft\Http\Message\Server\Request;
 use Swoft\Http\Message\Server\Response;
 use Swoft\WebSocket\Server\Bean\Annotation\WebSocket;
+use Swoft\WebSocket\Server\HandlerInterface;
 use Swoole\WebSocket\Frame;
 use Swoole\WebSocket\Server;
 

@@ -101,8 +101,8 @@ class HandlerMapping implements HandlerMappingInterface
      */
     public function registerRoutes(array $serviceMapping)
     {
-        foreach ($serviceMapping as $path => $handler) {
-            $this->registerRoute($path, $handler);
+        foreach ($serviceMapping as $path => $value) {
+            $this->registerRoute($path, $value['handler']);
         }
     }
 

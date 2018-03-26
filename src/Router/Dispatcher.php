@@ -10,7 +10,7 @@ namespace Swoft\WebSocket\Server\Router;
 
 use Swoft\Http\Message\Server\Request;
 use Swoft\Http\Message\Server\Response;
-use Swoft\WebSocket\Server\Controller\HandlerInterface;
+use Swoft\WebSocket\Server\HandlerInterface;
 use Swoft\WebSocket\Server\Exception\WsMessageException;
 use Swoft\WebSocket\Server\Exception\WsRouteException;
 use Swoft\WebSocket\Server\WebSocketContext;
@@ -50,6 +50,26 @@ class Dispatcher
     }
 
     /**
+     * @param Server $server
+     * @param Request $request
+     * @param int $fd
+     * @throws \Swoft\WebSocket\Server\Exception\WsRouteException
+     * @throws \InvalidArgumentException
+     */
+    public function open(Server $server, Request $request, int $fd)
+    {
+        $path = $request->getUri()->getPath();
+        list($className, ) = $this->getHandler($path);
+
+        /** @var HandlerInterface $handler */
+        $handler = \bean($className);
+
+        if (\method_exists($handler, 'onOpen')) {
+            $handler->onOpen($server, $request, $fd);
+        }
+    }
+
+    /**
      * dispatch ws message
      * @param Server $server
      * @param Frame $frame
@@ -69,7 +89,6 @@ class Dispatcher
 
         /** @var HandlerInterface $handler */
         $handler = \bean($className);
-
         $handler->onMessage($server, $frame);
     }
 
@@ -92,7 +111,9 @@ class Dispatcher
         /** @var HandlerInterface $handler */
         $handler = \bean($className);
 
-        $handler->onClose($server, $fd);
+        if (\method_exists($handler, 'onClose')) {
+            $handler->onClose($server, $fd);
+        }
     }
 
     /**

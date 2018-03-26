@@ -8,10 +8,10 @@ use Swoft\Bean\Wrapper\AbstractWrapper;
 use Swoft\WebSocket\Server\Bean\Annotation\WebSocket;
 
 /**
- * Class ControllerWrapper
+ * Class WebSocketWrapper
  * @package Swoft\WebSocket\Server\Bean\Wrapper
  */
-class ControllerWrapper extends AbstractWrapper
+class WebSocketWrapper extends AbstractWrapper
 {
     /**
      * 类注解

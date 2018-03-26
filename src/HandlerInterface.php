@@ -1,6 +1,6 @@
 <?php
 
-namespace Swoft\WebSocket\Server\Controller;
+namespace Swoft\WebSocket\Server;
 
 use Swoft\Http\Message\Server\Request;
 use Swoft\Http\Message\Server\Response;

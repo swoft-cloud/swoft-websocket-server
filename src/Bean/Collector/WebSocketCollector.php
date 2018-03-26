@@ -25,9 +25,12 @@ class WebSocketCollector implements CollectorInterface
      */
     public static function collect(string $className, $objectAnnotation = null, string $propertyName = '', string $methodName = '', $propertyValue = null)
     {
-        if ($objectAnnotation instanceof WebSocket) {\var_dump(__METHOD__);
-            self::$controllers[$className]['ws'] = [
+        if ($objectAnnotation instanceof WebSocket) {
+            $path = $objectAnnotation->getPath();
+
+            self::$controllers[$path] = [
                 'path' => $objectAnnotation->getPath(),
+                'handler' => $className,
             ];
         }
     }

@@ -4,7 +4,6 @@ namespace Swoft\WebSocket\Server;
 
 use Swoft\App;
 use Swoft\Core\Coroutine;
-use Swoft\WebSocket\Server\Controller\HandlerInterface;
 use Swoft\WebSocket\Server\Event\WsEvent;
 use Swoft\WebSocket\Server\Router\Dispatcher;
 use \Swoft\Http\Message\Server\Request as Psr7Request;
@@ -53,10 +52,10 @@ trait WebSocketEventTrait
 
         $cid = Coroutine::tid();
 
-        $this->log(
-            "Handshake: Ready to shake hands with the #$fd client connection, path {$metaAry['path']}, co ID #$cid. request headers:\n" .
-            \var_export($psr7Req->getHeaders(), 1)
-        );
+        // $this->log(
+        //     "Handshake: Ready to shake hands with the #$fd client connection, path {$metaAry['path']}, co ID #$cid. request headers:\n" .
+        //     \json_encode($psr7Req->getHeaders(), \JSON_UNESCAPED_SLASHES|\JSON_PRETTY_PRINT)
+        // );
 
         App::trigger(WsEvent::ON_HANDSHAKE, null, $request, $response, $fd);
 
@@ -83,7 +82,10 @@ trait WebSocketEventTrait
             $psr7Res = $psr7Res->withHeader('Sec-WebSocket-Protocol', $request->header['sec-websocket-protocol']);
         }
 
-        $this->log("Handshake: response headers:\n" . \var_export($psr7Res->getHeaders(), 1));
+        // $this->log(
+        //     "Handshake: response headers:\n" .
+        //     \json_encode($psr7Res->getHeaders(), \JSON_UNESCAPED_SLASHES|\JSON_PRETTY_PRINT)
+        // );
 
         // Response handshake successfully
         $psr7Res->send();
@@ -92,16 +94,16 @@ trait WebSocketEventTrait
 
         $this->log(
             "Handshake: The #{$fd} client handshake successful! path {$metaAry['path']}, co Id #$cid, Meta:\n" .
-            var_export($metaAry, 1)
+            \json_encode($metaAry, \JSON_UNESCAPED_SLASHES|\JSON_PRETTY_PRINT)
         );
 
         // Handshaking successful, Manually triggering the open event
         $this->server->defer(function () use ($psr7Req, $fd) {
             $this->onWsOpen($this->server, $psr7Req, $fd);
-
-            // delete coId to fd mapping
-            WebSocketContext::delFdToCoId();
         });
+
+        // delete coId to fd mapping
+        WebSocketContext::delFdToCoId();
 
         return true;
     }
@@ -117,7 +119,7 @@ trait WebSocketEventTrait
 
         $this->log(
             "onHandShake: Client #{$fd} send handShake request, connection info: " .
-            var_export($info, 1)
+            \json_encode($info, \JSON_UNESCAPED_SLASHES|\JSON_PRETTY_PRINT)
         );
 
         return [
@@ -142,6 +144,9 @@ trait WebSocketEventTrait
         App::trigger(WsEvent::ON_OPEN, null, $server, $request, $fd);
 
         $this->log("connection #$fd has been opened, co ID #" . Coroutine::tid());
+
+        /** @see Dispatcher::open() */
+        \bean('wsDispatcher')->open($server, $request, $fd);
     }
 
     /**
@@ -191,7 +196,6 @@ trait WebSocketEventTrait
             //
             // if (!$meta) {
             //     $this->log("the #$fd connection info has lost");
-            //
             //     return;
             // }
 
