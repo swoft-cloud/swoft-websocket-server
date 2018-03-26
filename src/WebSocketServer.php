@@ -63,7 +63,8 @@ class WebSocketServer extends HttpServer
 
         // bind events for ws server
         $this->server->on(SwooleEvent::ON_HAND_SHAKE, [$this, 'onHandshake']);
-        $this->server->on(SwooleEvent::ON_OPEN, [$this, 'onOpen']);
+        // NOTICE: The onOpen event is not fired after an onHandShake callback function
+        // $this->server->on(SwooleEvent::ON_OPEN, [$this, 'onOpen']);
         $this->server->on(SwooleEvent::ON_MESSAGE, [$this, 'onMessage']);
         $this->server->on(SwooleEvent::ON_CLOSE, [$this, 'onClose']);
 

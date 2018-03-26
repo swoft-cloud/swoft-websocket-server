@@ -1,12 +1,10 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: inhere
- * Date: 2018/3/21
- * Time: 上午11:06
- */
 
 namespace Swoft\WebSocket\Server;
+
+use Psr\Http\Message\RequestInterface;
+use Swoft\Core\Coroutine;
+use Swoft\Http\Message\Server\Request;
 
 /**
  * Class WebSocketContext
@@ -14,13 +12,220 @@ namespace Swoft\WebSocket\Server;
  */
 class WebSocketContext
 {
-    private static $contexts = [];
+    const META_KEY = 'meta';
+    const REQUEST_KEY = 'request';
+
+    /**
+     * @var array
+     * [
+     *  fd => [
+            // metadata
+     *      'meta' => [
+     *          'id' => fd,
+     *          'path' => request path,
+     *      ],
+     *
+     *      'request' => swoft psr7 request
+     *  ]
+     * ]
+     */
+    private static $connections = [];
+
+    /**
+     * The map for coroutine id to fd
+     * @var array
+     * [ coID => fd ]
+     */
+    private static $map = [];
+
+    /**
+     * @see WebSocketEventTrait::onHandShake()
+     * @param int $fd
+     * @param array $meta
+     * [
+     *  'path' => request uri path,
+     * ]
+     * @param Request $request
+     */
+    public static function set(int $fd, array $meta, Request $request)
+    {
+        self::$connections[$fd][self::META_KEY] = $meta;
+        self::$connections[$fd][self::REQUEST_KEY] = $request;
+    }
+
+    /**
+     * @param int $fd
+     * @return array|null
+     */
+    public static function get(int $fd = null)
+    {
+        if ($fd === null) {
+            $cid = self::getCoroutineId();
+            $fd = self::$map[$cid] ?? null;
+
+            if ($fd === null) {
+                return null;
+            }
+        }
+
+        return self::$connections[$fd] ?? null;
+    }
+
+    /**
+     * @param int|null $fd
+     */
+    public static function del(int $fd = null)
+    {
+
+    }
+
+    /**
+     * @return array|null
+     */
+    public static function getByCoId()
+    {
+        $fd = self::getFdByCoId();
+
+        if ($fd === null) {
+            return null;
+        }
+
+        return self::get($fd);
+    }
+
+    /**
+     * @return Request|null
+     */
+    public static function getRequest()
+    {
+        return self::getCoroutineContext(self::REQUEST_KEY);
+    }
+
+    /**
+     * Set the object of request
+     *
+     * @param RequestInterface|Request $request
+     */
+    public static function setRequest(RequestInterface $request)
+    {
+        $fd = self::getFdByCoId();
+
+        self::$connections[$fd][self::REQUEST_KEY] = $request;
+    }
+
+    /**
+     * @param string|null $key
+     * @return array|mixed
+     */
+    public static function getMeta(string $key = null)
+    {
+        $meta = self::getCoroutineContext(self::META_KEY);
+
+        if ($key === null) {
+            return $meta;
+        }
+
+        if (!$meta) {
+            return null;
+        }
+
+        // find value by key in meta
+        return $meta[$key] ?? null;
+    }
+
+    /**
+     * @param mixed $value
+     * @param string|null $key The key of the meta
+     */
+    public static function setMeta($value, string $key = null)
+    {
+        if ($key === null) {
+
+        }
+
+        $meta = self::getCoroutineContext(self::META_KEY);
+
+    }
+
+    /**
+     * @param string $key
+     * @return mixed|null
+     */
+    public static function getCoroutineContext(string $key)
+    {
+        $fd = self::getFdByCoId();
+
+        // find context
+        if (!$context = self::$connections[$fd] ?? null) {
+            return null;
+        }
+
+        // find value by key in context
+        return $context[$key] ?? null;
+    }
+
+    /**
+     * init coId to fd mapping
+     * @param int $fd
+     */
+    public static function setFdToCoId(int $fd)
+    {
+        $cid = self::getCoroutineId();
+
+        self::$map[$cid] = $fd;
+    }
+
+    /**
+     * @return int|null
+     */
+    public static function getFdByCoId()
+    {
+        $cid = self::getCoroutineId();
+
+        return self::$map[$cid] ?? null;
+    }
+
+    /**
+     * delete coId to fd mapping
+     * @return bool
+     */
+    public static function delFdToCoId(): bool
+    {
+        $cid = self::getCoroutineId();
+
+        if (isset(self::$map[$cid])) {
+            unset(self::$map[$cid]);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Get current coroutine ID
+     *
+     * @return int|null Return null when in non-coroutine context
+     */
+    public static function getCoroutineId()
+    {
+        return Coroutine::tid();
+    }
 
     /**
      * @return array
      */
-    public static function getContexts(): array
+    public static function getMap(): array
     {
-        return self::$contexts;
+        return self::$map;
     }
+
+    /**
+     * @return array
+     */
+    public static function getConnections(): array
+    {
+        return self::$connections;
+    }
+
 }

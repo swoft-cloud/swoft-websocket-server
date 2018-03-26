@@ -1,12 +1,7 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: inhere
- * Date: 2018/3/18
- * Time: 下午7:50
- */
 
 namespace Swoft\WebSocket\Server\Router;
+
 use Swoft\Http\Message\Router\HandlerMappingInterface;
 use Swoft\WebSocket\Server\Exception\WsRouteException;
 
@@ -16,10 +11,30 @@ use Swoft\WebSocket\Server\Exception\WsRouteException;
  */
 class HandlerMapping implements HandlerMappingInterface
 {
+    const FOUND = 0;
+    const NOT_FOUND = 1;
+
     /**
      * @var array
+     * [
+     *  '/echo' => [
+     *      'handler' => handler,
+     *      'option' => options
+     *  ],
+     *  ...
+     * ]
      */
     private $routes = [];
+
+    /**
+     * @param string $path
+     * @param $handler
+     * @param array $options
+     */
+    public function add(string $path, $handler, array $options = [])
+    {
+        $this->registerRoute($path, $handler, $options);
+    }
 
     /**
      * Get handler from router
@@ -38,17 +53,28 @@ class HandlerMapping implements HandlerMappingInterface
     /**
      * Match route
      *
-     * @param string $path
+     * @param string $path e.g '/echo'
      * @return array
      * @throws \Swoft\WebSocket\Server\Exception\WsRouteException
      */
     public function match(string $path): array
     {
+        $path = \rtrim($path, '/ ');
+
         if (!isset($this->routes[$path])) {
-            throw new WsRouteException(sprintf('The requested ws route "%s" path is not exist! ', $path));
+            return [self::NOT_FOUND, $path];
         }
 
-        return $this->routes[$path];
+        return [self::FOUND, $this->routes[$path]];
+    }
+
+    /**
+     * @param string $path
+     * @return bool
+     */
+    public function hasRoute(string $path): bool
+    {
+        return isset($this->routes[$path]);
     }
 
     /**
@@ -56,13 +82,16 @@ class HandlerMapping implements HandlerMappingInterface
      *
      * @param string $path
      * @param mixed $handler
-     * @param array $options
+     * @param array $option
      */
-    private function registerRoute(string $path, $handler, array $options = [])
+    private function registerRoute(string $path, $handler, array $option = [])
     {
         $path = '/' . \trim($path, '/ ');
 
-        $this->routes[$path] = [$handler, $options];
+        $this->routes[$path] = [
+            'handler' => $handler,
+            'option' => $option
+        ];
     }
 
     /**
