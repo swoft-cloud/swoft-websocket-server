@@ -7,7 +7,7 @@ use Swoft\Helper\EnvHelper;
 use Swoft\WebSocket\Server\WebSocketServer;
 
 /**
- * There some commands for manage the webSocket server
+ * There are some commands for manage the webSocket server
  * @Command(coroutine=false, server=true)
  * @package Swoft\WebSocket\Command
  */
@@ -51,13 +51,13 @@ class WsCommand
         $wsPort = $ws['port'];
         $wsMode = $ws['mode'];
         $wsType = $ws['type'];
-        $httpStatus = $ws['enable_http'] ? '<note>Enabled</note>' : '<warning>Disabled</warning>';
+        $httpStatus = $ws['enable_http'] ? '<info>Enabled</info>' : '<warning>Disabled</warning>';
 
         // TCP 启动参数
         $tcpHost = $tcp['host'];
         $tcpPort = $tcp['port'];
         $tcpType = $tcp['type'];
-        $tcpStatus = $serverOpts['tcpable'] ? '<note>Enabled</note>' : '<warning>Disabled</warning>';
+        $tcpStatus = $serverOpts['tcpable'] ? '<info>Enabled</info>' : '<warning>Disabled</warning>';
 
         // 信息面板
         $lines = [

@@ -1,13 +1,8 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: inhere
- * Date: 2018/3/18
- * Time: 上午2:20
- */
 
 namespace Swoft\WebSocket\Server\Router;
 
+use Swoft\Core\ErrorHandler;
 use Swoft\Http\Message\Server\Request;
 use Swoft\Http\Message\Server\Response;
 use Swoft\WebSocket\Server\HandlerInterface;
@@ -30,11 +25,27 @@ class Dispatcher
      * @return array eg. [status, response]
      * @throws \Swoft\WebSocket\Server\Exception\WsRouteException
      * @throws \InvalidArgumentException
+     * @throws \Throwable
      */
     public function handshake(Request $request, Response $response): array
     {
-        $path = $request->getUri()->getPath();
-        list($className, ) = $this->getHandler($path);
+        try {
+            $path = $request->getUri()->getPath();
+            list($className, ) = $this->getHandler($path);
+        } catch (\Throwable $e) {
+            /* @var ErrorHandler $errorHandler */
+            // $errorHandler = \bean(ErrorHandler::class);
+            // $response = $errorHandler->handle($e);
+            if ($e instanceof WsRouteException) {
+                return [
+                    HandlerInterface::HANDSHAKE_FAIL,
+                    $response->withStatus(404)
+                ];
+            }
+
+            // other error
+            throw $e;
+        }
 
         /** @var HandlerInterface $handler */
         $handler = \bean($className);

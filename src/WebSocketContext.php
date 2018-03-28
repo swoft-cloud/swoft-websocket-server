@@ -103,6 +103,14 @@ class WebSocketContext
     }
 
     /**
+     * @return int
+     */
+    public static function count(): int
+    {
+        return \count(self::$connections);
+    }
+
+    /**
      * @return array|null
      */
     public static function getByCoId()

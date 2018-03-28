@@ -3,6 +3,7 @@
 namespace Swoft\WebSocket\Server;
 
 use Swoft\Bootstrap\SwooleEvent;
+use Swoft\Console\Helper\ConsoleUtil;
 use Swoft\Http\Server\Http\HttpServer;
 use Swoole\WebSocket\Server;
 
@@ -92,13 +93,11 @@ class WebSocketServer extends HttpServer
      */
     public function log(string $msg, array $data = [], string $type = 'info')
     {
-        \output()->writeln(\sprintf(
-            '%s [%s] %s %s',
-            \date('Y/m/d H:i:s'),
-            \strtoupper($type),
-            \trim($msg),
-            $data ? \json_encode($data, \JSON_UNESCAPED_SLASHES) : ''
-        ));
+        if ($this->isDaemonize()) {
+            return;
+        }
+
+        ConsoleUtil::log($msg, $data, $type);
     }
 
     /*****************************************************************************
@@ -297,12 +296,20 @@ class WebSocketServer extends HttpServer
     }
 
     /**
-     * @param int $cid
+     * @param int $fd
      * @return bool
      */
-    public function exist(int $cid): bool
+    public function exist(int $fd): bool
     {
-        return $this->server->exist($cid);
+        return $this->server->exist($fd);
+    }
+
+    /**
+     * @return int
+     */
+    public function count(): int
+    {
+        return \count($this->server->connections);
     }
 
     /**
