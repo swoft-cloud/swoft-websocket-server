@@ -48,6 +48,8 @@ interface HandlerInterface
     public function onMessage(Server $server, Frame $frame);
 
     /**
+     * on connection closed
+     * - you can do something. eg. record log
      * @param Server $server
      * @param int $fd
      * @return mixed

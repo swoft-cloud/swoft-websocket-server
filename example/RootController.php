@@ -55,6 +55,6 @@ class RootController implements HandlerInterface
      */
     public function onClose(Server $server, int $fd)
     {
-        $server->push($fd, 'oo, goodbye! :)');
+        // do something. eg. record log
     }
 }

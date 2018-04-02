@@ -26,6 +26,7 @@ trait WebSocketEventTrait
      * @return bool
      * @throws \Swoft\WebSocket\Server\Exception\WsRouteException
      * @throws \InvalidArgumentException
+     * @throws \Throwable
      */
     public function onHandShake(Request $request, Response $response): bool
     {
@@ -40,21 +41,20 @@ trait WebSocketEventTrait
         }
 
         // Initialize psr7 Request and Response and metadata
+        $cid = Coroutine::tid();
+        $meta = $this->buildConnectionMetadata($fd, $request);
         $psr7Req = Psr7Request::loadFromSwooleRequest($request);
         $psr7Res = new \Swoft\Http\Message\Server\Response($response);
-        $metaAry = $this->buildConnectionMetadata($fd, $request);
 
         // Initialize client information
-        WebSocketContext::set($fd, $metaAry, $psr7Req);
+        WebSocketContext::set($fd, $meta, $psr7Req);
 
         // init fd and coId mapping
         WebSocketContext::setFdToCoId($fd);
 
-        $cid = Coroutine::tid();
-
         // $this->log(
-        //     "Handshake: Ready to shake hands with the #$fd client connection, path {$metaAry['path']}, co ID #$cid. request headers:\n" .
-        //     \json_encode($psr7Req->getHeaders(), \JSON_UNESCAPED_SLASHES|\JSON_PRETTY_PRINT)
+        //     "Handshake: Ready to shake hands with the #$fd client connection, path {$meta['path']}, co ID #$cid. request headers:\n" .
+        //     $psr7Req->getHeaders()
         // );
 
         App::trigger(WsEvent::ON_HANDSHAKE, null, $request, $response, $fd);
@@ -67,9 +67,10 @@ trait WebSocketEventTrait
 
         // handshake check is failed -- 拒绝连接，比如需要认证，限定路由，限定ip，限定domain等
         if (HandlerInterface::HANDSHAKE_OK !== $status) {
-            $this->log("The #$fd client handshake check failed, uri path {$metaAry['path']}");
+            $this->log("Client #$fd handshake check failed, request path {$meta['path']}");
             $psr7Res->send();
 
+            // NOTICE: Rejecting a handshake still triggers a close event.
             return false;
         }
 
@@ -82,20 +83,14 @@ trait WebSocketEventTrait
             $psr7Res = $psr7Res->withHeader('Sec-WebSocket-Protocol', $request->header['sec-websocket-protocol']);
         }
 
-        // $this->log(
-        //     "Handshake: response headers:\n" .
-        //     \json_encode($psr7Res->getHeaders(), \JSON_UNESCAPED_SLASHES|\JSON_PRETTY_PRINT)
-        // );
+        // $this->log("Handshake: response headers:\n", $psr7Res->getHeaders());
 
         // Response handshake successfully
         $psr7Res->send();
 
         WebSocketContext::setMeta($fd, true, 'handshake');
 
-        $this->log(
-            "Handshake: The #{$fd} client handshake successful! path {$metaAry['path']}, co Id #$cid, Meta:\n" .
-            \json_encode($metaAry, \JSON_UNESCAPED_SLASHES|\JSON_PRETTY_PRINT)
-        );
+        $this->log("Handshake: Client #{$fd} handshake successful! path {$meta['path']}, co Id #$cid, Meta:", $meta, 'debug');
 
         // Handshaking successful, Manually triggering the open event
         $this->server->defer(function () use ($psr7Req, $fd) {
@@ -116,17 +111,15 @@ trait WebSocketEventTrait
     protected function buildConnectionMetadata(int $fd, Request $request): array
     {
         $info = $this->getClientInfo($fd);
+        $path = \parse_url($request->server['request_uri'], \PHP_URL_PATH);
 
-        $this->log(
-            "onHandShake: Client #{$fd} send handShake request, connection info: " .
-            \json_encode($info, \JSON_UNESCAPED_SLASHES|\JSON_PRETTY_PRINT)
-        );
+        $this->log("onHandShake: Client #{$fd} send handshake request to {$path}, client info: ", $info, 'debug');
 
         return [
             'id' => $fd,
             'ip' => $info['remote_ip'],
             'port' => $info['remote_port'],
-            'path' => $request->server['request_uri'],
+            'path' => $path,
             'handshake' => false,
             'connectTime' => $info['connect_time'],
             'handshakeTime' => \microtime(true),
@@ -143,7 +136,7 @@ trait WebSocketEventTrait
     {
         App::trigger(WsEvent::ON_OPEN, null, $server, $request, $fd);
 
-        $this->log("connection #$fd has been opened, co ID #" . Coroutine::tid());
+        $this->log("connection #$fd has been opened, co ID #" . Coroutine::tid(), [], 'debug');
 
         /** @see Dispatcher::open() */
         \bean('wsDispatcher')->open($server, $request, $fd);
@@ -166,7 +159,7 @@ trait WebSocketEventTrait
 
         App::trigger(WsEvent::ON_MESSAGE, null, $server, $frame);
 
-        $this->log("received message: {$frame->data} from fd #{$fd}, co ID #" . Coroutine::tid());
+        $this->log("received message: {$frame->data} from fd #{$fd}, co ID #" . Coroutine::tid(), [], 'debug');
 
         /** @see Dispatcher::message() */
         \bean('wsDispatcher')->message($server, $frame);
@@ -177,6 +170,7 @@ trait WebSocketEventTrait
 
     /**
      * on webSocket close
+     * - 注意：close 事件触发时，已经不能给客户端发消息了
      * @param  Server $server
      * @param  int $fd
      * @throws \InvalidArgumentException
@@ -190,22 +184,25 @@ trait WebSocketEventTrait
         */
         $fdInfo = $this->getClientInfo($fd);
 
-        // is web socket request(websocket_status = 2)
         if ($fdInfo['websocket_status'] > 0) {
-            // $meta = $this->delConnection($fd);
-            //
-            // if (!$meta) {
-            //     $this->log("the #$fd connection info has lost");
-            //     return;
-            // }
+            $total = $this->count();
+            $this->log("onClose: Client #{$fd} connection will close. client count $total, client info:", $fdInfo, 'debug');
 
-            /** @see Dispatcher::close() */
-            \bean('wsDispatcher')->close($server, $fd);
+            if (!$meta = WebSocketContext::getMeta(null, $fd)) {
+                $this->log("onClose: Client #{$fd} connection meta info has been lost");
+                return;
+            }
+
+            $this->log("onClose: Client #{$fd} meta info:", $meta, 'debug');
+
+            // 握手成功的才回调 close
+            if ($meta['handshake']) {
+                /** @see Dispatcher::close() */
+                \bean('wsDispatcher')->close($server, $fd);
+            }
 
             // call on close callback
             App::trigger(WsEvent::ON_CLOSE, null, $server, $fd);
-
-            $this->log("onClose: Client #{$fd} is closed. client-info:\n" . var_export($fdInfo, 1));
 
             // clear context info of the connection
             WebSocketContext::del($fd);
