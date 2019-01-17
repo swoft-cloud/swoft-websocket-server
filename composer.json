@@ -11,19 +11,16 @@
   "description": "websocket server for swoft",
   "license": "Apache-2.0",
   "require": {
-    "swoft/http-server": "^1.0"
   },
   "autoload": {
     "psr-4": {
       "Swoft\\WebSocket\\Server\\": "src/"
     },
     "files": [
-      "src/Helper/Functions.php"
     ]
   },
   "autoload-dev": {
     "psr-4": {
-      "SwoftTest\\WebSocket\\Server\\": "test/Cases"
     }
   },
   "repositories": {
@@ -33,9 +30,7 @@
     }
   },
   "require-dev": {
-    "phpunit/phpunit": "^5.7"
   },
   "scripts": {
-    "test": "./vendor/bin/phpunit"
   }
 }
