@@ -17,6 +17,7 @@
       "Swoft\\WebSocket\\Server\\": "src/"
     },
     "files": [
+      "src/Helper/Functions.php"
     ]
   },
   "autoload-dev": {
